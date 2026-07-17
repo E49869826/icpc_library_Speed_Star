@@ -1,4 +1,3 @@
-
 template<typename T, T (*f)(T, T), T (*e)()> struct RBST {
    inline int rnd() {
       static int x = 123456789;
@@ -14,49 +13,50 @@ template<typename T, T (*f)(T, T), T (*e)()> struct RBST {
       return w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
    }
    struct node {
-      node *l, *r;
+      int l, r;
       int cnt;
       T x, sum;
       node() = default;
-      node(T x) : x(x), sum(x), l(0), r(0) { cnt = 1; }
+      node(T x_) : l(0), r(0), x(x_), sum(x_) { cnt = 1; }
    };
-   RBST(int n) : pool(n) {}
-   int cnt(const node* t) { return t ? t->cnt : 0; }
-   T sum(const node* t) { return t ? t->sum : e(); }
-   node* update(node* t) {
-      t->cnt = cnt(t->l) + cnt(t->r) + 1;
-      t->sum = f(f(sum(t->l), t->x), sum(t->r));
+   RBST(int n) : b(n + 1) {}
+   int cnt(const int t) { return t ? b[t].cnt : 0; }
+   T sum(const int t) { return t ? b[t].sum : e(); }
+   int update(int t) {
+      b[t].cnt = cnt(b[t].l) + cnt(b[t].r) + 1;
+      b[t].sum = f(f(sum(b[t].l), b[t].x), sum(b[t].r));
       return t;
    }
-   vector<node> pool;
-   int ptr = 0;
-   inline node* alloc(const T& v) {
-      if(si(pool) == ptr) pool.resize(si(pool) * 2);
-      return &(pool[ptr++] = node(v));
+   vector<node> b;
+   int ptr = 1;
+   inline int alloc(const T& v) {
+      if(si(b) == ptr) b.resize(si(b) * 2);
+      b[ptr] = node(v);
+      return ptr++;
    }
-   node* merge(node* l, node* r) {
+   int merge(int l, int r) {
       if(!l or !r) return l ? l : r;
       if(rnd() % (cnt(l) + cnt(r)) < cnt(l)) {
-         l->r = merge(l->r, r);
+         b[l].r = merge(b[l].r, r);
          return update(l);
       }
-      r->l = merge(l, r->l);
+      b[r].l = merge(l, b[r].l);
       return update(r);
    }
 
-   pair<node*, node*> split(node* t, int k) {
+   pair<int, int> split(int t, int k) {
       if(!t) return {t, t};
-      if(k <= cnt(t->l)) {
-         auto [l, r] = split(t->l, k);
-         t->l = r;
+      if(k <= cnt(b[t].l)) {
+         auto [l, r] = split(b[t].l, k);
+         b[t].l = r;
          return {l, update(t)};
       }
-      auto [l, r] = split(t->r, k - cnt(t->l) - 1);
-      t->r = l;
+      auto [l, r] = split(b[t].r, k - cnt(b[t].l) - 1);
+      b[t].r = l;
       return {update(t), r};
    }
 
-   void insert(node*& t, int k, const T& v) {
+   void insert(int& t, int k, const T& v) {
       auto [l, r] = split(t, k);
       t = merge(merge(l, alloc(v)), r);
    }
